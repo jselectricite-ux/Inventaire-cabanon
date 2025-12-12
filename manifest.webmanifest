@@ -2,7 +2,7 @@
   "name": "Inventaire Électrique",
   "short_name": "Inventaire",
   "description": "Inventaire électrique pour tablette - Hager/Legrand/Schneider/Sonepar/Wurth",
-  "start_url": "./index.html",
+  "start_url": "/Inventaire-cabanon/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4A90E2",

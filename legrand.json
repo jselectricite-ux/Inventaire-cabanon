@@ -1,0 +1,12 @@
+[
+  {
+    "ref": "LGR2001",
+    "designation": "Prise Legrand 2P+T",
+    "category": "Appareillage"
+  },
+  {
+    "ref": "LGR2002",
+    "designation": "Disjoncteur Legrand 10A",
+    "category": "Protection"
+  }
+]

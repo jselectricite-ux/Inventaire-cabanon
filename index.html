@@ -1,0 +1,57 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Inventaire cabanon</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script src="js/app.js" defer></script>
+</head>
+<body>
+  <header><h1>Inventaire cabanon</h1></header>
+  <main>
+    <section class="controls">
+      <input id="searchBox" placeholder="Rechercher référence ou désignation" aria-label="Recherche" />
+      <select id="catalogSelect" aria-label="Filtrer catalogue">
+        <option value="all">Tous les catalogues</option>
+        <option value="hager">Hager</option>
+        <option value="legrand">Legrand</option>
+        <option value="schneider">Schneider</option>
+        <option value="sonepar">Sonepar</option>
+        <option value="wurth">Würth</option>
+      </select>
+      <button id="scanBtn">Scanner (caméra)</button>
+      <input id="fileImport" type="file" accept=".csv,.xlsx" />
+      <button id="importBtn">Importer catalogue</button>
+      <button id="resetQtyBtn">Remise qty → 0</button>
+      <button id="exportBtn">Exporter CSV</button>
+    </section>
+
+    <section id="scanner" style="display:none;"></section>
+
+    <section class="card">
+      <table id="table" aria-label="Tableau inventaire">
+        <thead><tr><th>Réf</th><th>Désignation</th><th>Catégorie</th><th>Qté</th><th>Prix</th><th>Total</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="popup" class="popup" style="display:none;">
+    <div class="popup-content">
+      <h3>Ajouter / Modifier</h3>
+      <label>Référence<input id="refInput" /></label>
+      <label>Désignation<input id="desInput" /></label>
+      <label>Catégorie<input id="catInput" /></label>
+      <label>Quantité<input id="qtyInput" type="number" value="1" min="0" /></label>
+      <label>Prix unité (€)<input id="priceInput" type="number" step="0.01" /></label>
+      <div class="row"><button id="saveBtn">Enregistrer</button><button id="cancelBtn">Annuler</button></div>
+    </div>
+  </div>
+
+  <footer><small>Catalogues intégrés : Hager / Legrand / Schneider / Sonepar / Wurth — sans prix. Import Sonepar possible.</small></footer>
+</body>
+</html>

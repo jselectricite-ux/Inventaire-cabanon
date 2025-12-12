@@ -1,0 +1,12 @@
+[
+  {
+    "ref": "SCH3001",
+    "designation": "Contacteur Schneider LC1",
+    "category": "Commande"
+  },
+  {
+    "ref": "SCH3002",
+    "designation": "Relais Schneider 24V",
+    "category": "Commande"
+  }
+]

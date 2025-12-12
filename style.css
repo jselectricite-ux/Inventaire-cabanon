@@ -1,0 +1,13 @@
+
+body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px;background:#f4f6f8;color:#222}
+header{display:flex;align-items:center;justify-content:space-between}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+input,select,button{padding:8px;border-radius:6px;border:1px solid #ccc}
+button{background:#0275d8;color:#fff;border:none}
+.card{background:white;padding:8px;border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+.popup{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4)}
+.popup-content{background:white;padding:12px;border-radius:8px;width:90%;max-width:420px}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+#scanner{max-width:480px;margin:10px auto}

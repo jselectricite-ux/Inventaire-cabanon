@@ -229,24 +229,31 @@ scanBtn.addEventListener("click", async () => {
     qr = new Html5Qrcode("reader");
 
     await qr.start(
-      cameraId, // ✅ DEVICE ID FORCÉ
-      {
-        fps: 10,
-        qrbox: { width: 280, height: 180 }
-      },
-      decodedText => {
-        qr.stop();
-        scannerDiv.style.display = "none";
+  cameraId,
+  {
+    fps: 10,
+    qrbox: { width: 300, height: 200 },
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39
+    ]
+  },
+  decodedText => {
+    qr.stop();
+    scannerDiv.style.display = "none";
 
-        openPopup({
-          ref: decodedText,
-          designation: "",
-          category: "",
-          qty: 1,
-          price: 0
-        });
-      }
-    );
+    openPopup({
+      ref: decodedText,
+      designation: "",
+      category: "",
+      qty: 1,
+      price: 0
+    });
+  }
+);
   } catch (err) {
     alert("Erreur caméra : " + err);
     scannerDiv.style.display = "none";

@@ -229,32 +229,7 @@ scanBtn.addEventListener("click", async () => {
     qr = new Html5Qrcode("reader");
 
     await qr.start(
-      { facingMode: "environment" }, // 🔥 FORCE caméra arrière
-      {
-        fps: 10,
-        qrbox: { width: 280, height: 180 }
-      },
-      decodedText => {
-        qr.stop();
-        scannerDiv.style.display = "none";
-
-        openPopup({
-          ref: decodedText,
-          designation: "",
-          category: "",
-          qty: 1,
-          price: 0
-        });
-      }
-    );
-  } catch (err) {
-    alert("Erreur caméra : " + err);
-    scannerDiv.style.display = "none";
-  }
-});
-
-    await qr.start(
-      backCamera.id,
+      { facingMode: "environment" }, // ✅ caméra arrière forcée
       {
         fps: 10,
         qrbox: { width: 280, height: 180 }

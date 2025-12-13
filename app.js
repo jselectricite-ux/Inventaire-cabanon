@@ -70,3 +70,21 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   scanBtn.onclick = ()=>{ if(scannerDiv.style.display === 'block'){ if(html5QrCode){ html5QrCode.stop().then(()=>{ scannerDiv.style.display='none'; }); } return; } scannerDiv.innerHTML = '<div id="reader" style="width:100%"></div>'; scannerDiv.style.display='block'; html5QrCode = new Html5Qrcode('reader'); Html5Qrcode.getCameras().then(cameras=>{ const cameraId = cameras.length ? cameras[0].id : null; html5QrCode.start(cameraId, {fps:10,qrbox:250}, decoded=>{ alert('Code détecté : '+decoded); html5QrCode.stop().then(()=>{ scannerDiv.style.display='none'; }); openPopup(decoded); }, err=>{}).catch(err=>{ alert('Erreur caméra: '+err); }); }).catch(err=>{ alert('Caméra non trouvée: '+err); }); };
   tableBody.addEventListener('click', e=>{ const tr = e.target.closest('tr'); if(!tr) return; const ref = tr.children[0].innerText; openPopup(ref); });
 });
+function findInCatalog(ref) {
+  ref = ref.toUpperCase();
+
+  for (const [brand, items] of Object.entries(catalogs)) {
+    const found = items.find(
+      item => item.ref.toUpperCase() === ref
+    );
+
+    if (found) {
+      return {
+        ref: found.ref,
+        designation: found.designation,
+        categorie: found.categorie || brand
+      };
+    }
+  }
+  return null;
+}

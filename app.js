@@ -214,7 +214,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.download = "inventaire.csv";
     a.click();
   };
+/* === Import catalogue fournisseur (CSV) === */
 
+const fileInput = document.getElementById("fileImport");
+const importBtn = document.getElementById("importBtn");
+
+importBtn.addEventListener("click", () => {
+  if (!fileInput.files.length) {
+    alert("Sélectionne un fichier CSV fournisseur");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    const text = e.target.result;
+    importCSV(text);
+  };
+
+  reader.readAsText(file, "UTF-8");
+});
+
+function importCSV(csvText) {
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) {
+    alert("Fichier CSV invalide");
+    return;
+  }
+
+  const headers = lines[0].toLowerCase();
+
+  const refIndex = headers.indexOf("ref");
+  const desIndex = headers.indexOf("désignation") !== -1
+    ? headers.indexOf("désignation")
+    : headers.indexOf("designation");
+  const catIndex = headers.indexOf("cat");
+  const priceIndex = headers.indexOf("prix");
+
+  let added = 0;
+  let updated = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(";");
+
+    const ref = cols[0]?.trim();
+    const designation = cols[1]?.trim();
+    const category = cols[2]?.trim() || "";
+    const price = parseFloat(
+      cols[3]?.replace(",", ".")
+    ) || 0;
+
+    if (!ref || !designation) continue;
+
+    const existing = inventory.find(it => it.ref === ref);
+
+    if (existing) {
+      existing.designation = designation;
+      existing.category = category;
+      existing.price = price;
+      updated++;
+    } else {
+      inventory.push({
+        ref,
+        designation,
+        category,
+        qty: 0,
+        price
+      });
+      added++;
+    }
+  }
+
+  saveLocal();
+  renderTable(searchBox.value);
+
+  alert(`Import terminé ✅
+Ajoutés : ${added}
+Mis à jour : ${updated}`);
+}
   /* === SCANNER === */
   let qr = null;
 

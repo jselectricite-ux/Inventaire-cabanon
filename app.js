@@ -209,31 +209,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* === Camera === */
-  let qr;
-  scanBtn.addEventListener("click", async () => {
-    scannerDiv.style.display = "block";
-    scannerDiv.innerHTML = "<div id='reader'></div>";
+let qr = null;
 
-    qr = new Html5Qrcode("reader");
-    scanBtn.addEventListener("click", async () => {
+scanBtn.addEventListener("click", async () => {
   scannerDiv.style.display = "block";
-  scannerDiv.innerHTML = "<div id='reader'></div>";
-
-  qr = new Html5Qrcode("reader");
+  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
 
   try {
-    const cameras = await Html5Qrcode.getCameras();
+    qr = new Html5Qrcode("reader");
 
-    // 🔥 Priorité caméra arrière
-    let cameraId =
+    const cameras = await Html5Qrcode.getCameras();
+    if (!cameras || cameras.length === 0) {
+      alert("Aucune caméra trouvée");
+      return;
+    }
+
+    // 🔥 priorité caméra arrière
+    const backCamera =
       cameras.find(c =>
         c.label.toLowerCase().includes("back") ||
         c.label.toLowerCase().includes("rear") ||
         c.label.toLowerCase().includes("environment")
-      )?.id || cameras[cameras.length - 1].id;
+      ) || cameras[cameras.length - 1];
 
     await qr.start(
-      cameraId,
+      backCamera.id,
       {
         fps: 10,
         qrbox: { width: 280, height: 180 }
@@ -241,6 +241,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       decodedText => {
         qr.stop();
         scannerDiv.style.display = "none";
+
         openPopup({
           ref: decodedText,
           designation: "",
@@ -250,17 +251,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       }
     );
-  } catch (e) {
-    alert("Caméra indisponible : " + e);
+  } catch (err) {
+    alert("Erreur caméra : " + err);
+    scannerDiv.style.display = "none";
   }
-});
-      txt => {
-        qr.stop();
-        scannerDiv.style.display = "none";
-        openPopup({ ref: txt, designation: "", qty: 1, price: 0 });
-      }
-    );
-  });
-
-  renderTable();
 });

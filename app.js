@@ -252,3 +252,4 @@ scanBtn.addEventListener("click", async () => {
     scannerDiv.style.display = "none";
   }
 });
+}); // 👈 FERMETURE DOMContentLoaded

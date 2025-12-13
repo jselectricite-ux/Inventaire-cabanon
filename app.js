@@ -1,11 +1,11 @@
 /* ================================
    Inventaire Cabanon – app.js
-   Version PRO – Stable
+   Version AUTO-CATALOGUES
 ================================ */
 
 console.log("✅ app.js chargé");
 
-const STORAGE_KEY = "inventaire_cabanon_v5";
+const STORAGE_KEY = "inventaire_cabanon_v6";
 
 /* === Catalogues fournisseurs === */
 const catalogs = {
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const scannerDiv = document.getElementById("scanner");
 
-  /* ========= LOAD CATALOGS ========= */
+  /* ========= CHARGEMENT CATALOGUES ========= */
   for (const name of Object.keys(catalogs)) {
     try {
       const r = await fetch(`${name}.json`);
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  /* ========= LOAD INVENTORY ========= */
+  /* ========= CHARGEMENT INVENTAIRE ========= */
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) inventory.push(...JSON.parse(saved));
 
@@ -78,6 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>${item.ref}</td>
         <td>${item.designation}</td>
         <td>${item.category || ""}</td>
+        <td>${item.supplier || ""}</td>
         <td>${item.qty}</td>
         <td>${item.price || ""}</td>
         <td>${(item.qty * (item.price || 0)).toFixed(2)}</td>
@@ -89,8 +90,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function findInCatalogs(code) {
+    for (const supplier in catalogs) {
+      const found = catalogs[supplier].find(
+        i =>
+          i.ean === code ||
+          i.ref === code ||
+          i.ref?.toLowerCase() === code.toLowerCase()
+      );
+      if (found) {
+        return { ...found, supplier };
+      }
+    }
+    return null;
+  }
+
   function openPopup(item = {}) {
     popup.style.display = "flex";
+
     refInput.value = item.ref || "";
     desInput.value = item.designation || "";
     catInput.value = item.category || "";
@@ -102,15 +119,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.style.display = "none";
   }
 
-  function findInCatalogs(code) {
-    for (const supplier in catalogs) {
-      const found = catalogs[supplier].find(
-        i => i.ean === code || i.ref === code
-      );
-      if (found) return found;
+  /* ========= AUTO-REMPLISSAGE SUR SAISIE ========= */
+  refInput.addEventListener("blur", () => {
+    const code = refInput.value.trim();
+    if (!code) return;
+
+    const found = findInCatalogs(code);
+    if (found) {
+      desInput.value = found.designation || "";
+      catInput.value = found.category || "";
     }
-    return null;
-  }
+  });
 
   /* ========= EVENTS ========= */
   searchBox.oninput = () => renderTable(searchBox.value);
@@ -157,8 +176,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   exportBtn.onclick = () => {
-    if (!inventory.length) return alert("Inventaire vide");
-
     const rows = [
       ["Ref","Désignation","Catégorie","Qté","Prix","Total"],
       ...inventory.map(i => [
@@ -178,50 +195,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.download = "inventaire.csv";
     a.click();
   };
-
-  /* ========= IMPORT CSV FOURNISSEUR ========= */
-  importBtn.onclick = () => {
-    if (!fileInput.files.length) {
-      alert("Sélectionne un fichier CSV");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = e => importCSV(e.target.result);
-    reader.readAsText(fileInput.files[0], "UTF-8");
-  };
-
-  function importCSV(csvText) {
-    const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) return alert("CSV invalide");
-
-    let added = 0, updated = 0;
-
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(";");
-      const ref = cols[0]?.trim();
-      const designation = cols[1]?.trim();
-      const category = cols[2]?.trim() || "";
-      const price = parseFloat(cols[3]?.replace(",", ".")) || 0;
-
-      if (!ref || !designation) continue;
-
-      const existing = inventory.find(it => it.ref === ref);
-      if (existing) {
-        existing.designation = designation;
-        existing.category = category;
-        existing.price = price;
-        updated++;
-      } else {
-        inventory.push({ ref, designation, category, qty: 0, price });
-        added++;
-      }
-    }
-
-    saveLocal();
-    renderTable(searchBox.value);
-    alert(`Import terminé\nAjoutés: ${added}\nMis à jour: ${updated}`);
-  }
 
   /* ========= SCANNER CODE-BARRES ========= */
   let qr = null;
@@ -244,20 +217,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       { facingMode: "environment" },
       {
         fps: 10,
-        qrbox: { width: 300, height: 200 },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.QR_CODE
-        ]
+        qrbox: { width: 300, height: 200 }
       },
       code => {
         qr.stop();
         scannerDiv.style.display = "none";
 
         const found = findInCatalogs(code);
+
         openPopup(found ? {
           ref: found.ref || code,
           designation: found.designation,

@@ -224,6 +224,11 @@ async function startScanner() {
   const stopBtn = document.getElementById("stopScanBtn");
 
   const cameras = await Html5Qrcode.getCameras();
+  if (!cameras.length) {
+    alert("Aucune caméra détectée");
+    return;
+  }
+
   cameras.forEach(c => {
     const opt = document.createElement("option");
     opt.value = c.id;
@@ -264,7 +269,7 @@ async function startScanner() {
 }
 
 function stopScanner() {
-  if (qr) qr.stop();
+  if (qr && qr.isScanning) qr.stop();
   scannerDiv.style.display = "none";
 }
 
@@ -281,14 +286,12 @@ function findInCatalog(code) {
 function onScanSuccess(code) {
   stopScanner();
 
-  // 🔎 existe déjà ?
   const existing = inventory.find(i => i.ref === code);
   if (existing) {
     openPopup(existing);
     return;
   }
 
-  // 🔎 recherche fournisseur
   const fromCatalog = findInCatalog(code);
   if (fromCatalog) {
     openPopup({

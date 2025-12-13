@@ -218,19 +218,40 @@ scanBtn.addEventListener("click", async () => {
   try {
     qr = new Html5Qrcode("reader");
 
-    const cameras = await Html5Qrcode.getCameras();
-    if (!cameras || cameras.length === 0) {
-      alert("Aucune caméra trouvée");
-      return;
-    }
+    /* === Camera === */
+let qr = null;
 
-    // 🔥 priorité caméra arrière
-    const backCamera =
-      cameras.find(c =>
-        c.label.toLowerCase().includes("back") ||
-        c.label.toLowerCase().includes("rear") ||
-        c.label.toLowerCase().includes("environment")
-      ) || cameras[cameras.length - 1];
+scanBtn.addEventListener("click", async () => {
+  scannerDiv.style.display = "block";
+  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
+
+  try {
+    qr = new Html5Qrcode("reader");
+
+    await qr.start(
+      { facingMode: "environment" }, // 🔥 FORCE caméra arrière
+      {
+        fps: 10,
+        qrbox: { width: 280, height: 180 }
+      },
+      decodedText => {
+        qr.stop();
+        scannerDiv.style.display = "none";
+
+        openPopup({
+          ref: decodedText,
+          designation: "",
+          category: "",
+          qty: 1,
+          price: 0
+        });
+      }
+    );
+  } catch (err) {
+    alert("Erreur caméra : " + err);
+    scannerDiv.style.display = "none";
+  }
+});
 
     await qr.start(
       backCamera.id,

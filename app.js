@@ -1,6 +1,7 @@
-/* =============================
+/* ================================
    Inventaire Cabanon – app.js
-   ============================= */
+================================ */
+
 console.log("✅ app.js chargé");
 
 const STORAGE_KEY = "inventaire_cabanon_v2";
@@ -16,7 +17,8 @@ const catalogs = {
 const inventory = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  /* === Éléments DOM === */
+
+  /* === DOM === */
   const tableBody = document.querySelector("#table tbody");
   const searchBox = document.getElementById("searchBox");
   const catalogSelect = document.getElementById("catalogSelect");
@@ -34,14 +36,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saveBtn = document.getElementById("saveBtn");
   const cancelBtn = document.getElementById("cancelBtn");
 
-  /* === Chargement inventaire local === */
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    JSON.parse(saved).forEach(i => inventory.push(i));
+  const scannerDiv = document.getElementById("scanner");
+
+  /* === Load catalogs (JSON at root) === */
+  const names = ["hager", "legrand", "schneider", "sonepar", "wurth"];
+  for (const n of names) {
+    try {
+      const r = await fetch(`${n}.json`);
+      catalogs[n] = await r.json();
+    } catch {
+      catalogs[n] = [];
+    }
   }
 
-  /* === Fonctions === */
+  /* === Load inventory === */
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) JSON.parse(saved).forEach(i => inventory.push(i));
 
+  /* === Helpers === */
   function saveLocal() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
   }
@@ -63,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>${item.designation}</td>
         <td>${item.category || ""}</td>
         <td>${item.qty}</td>
-        <td>${item.price ? item.price.toFixed(2) : ""}</td>
+        <td>${item.price || ""}</td>
         <td>${(item.qty * (item.price || 0)).toFixed(2)}</td>
         <td><button class="editBtn">Modifier</button></td>
       `;
@@ -74,7 +86,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openPopup(item = null) {
     popup.style.display = "flex";
-
     if (item) {
       refInput.value = item.ref;
       desInput.value = item.designation;
@@ -94,52 +105,92 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.style.display = "none";
   }
 
-  /* === Événements === */
+  /* === Events === */
 
-  addManualBtn.onclick = () => openPopup();
+  searchBox.addEventListener("input", () => renderTable(searchBox.value));
 
-  cancelBtn.onclick = closePopup;
+  catalogSelect.addEventListener("change", () => {
+    if (catalogSelect.value === "all") {
+      renderTable(searchBox.value);
+      return;
+    }
 
-  saveBtn.onclick = () => {
+    tableBody.innerHTML = "";
+    catalogs[catalogSelect.value].forEach(i => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i.ref}</td>
+        <td>${i.designation}</td>
+        <td>${i.category || ""}</td>
+        <td>0</td>
+        <td></td>
+        <td>0.00</td>
+        <td><button class="addBtn">Ajouter</button></td>
+      `;
+      tr.querySelector(".addBtn").onclick = () =>
+        openPopup({
+          ref: i.ref,
+          designation: i.designation,
+          category: i.category,
+          qty: 1,
+          price: 0
+        });
+      tableBody.appendChild(tr);
+    });
+  });
+
+  addManualBtn.addEventListener("click", () => openPopup());
+
+  saveBtn.addEventListener("click", () => {
     const ref = refInput.value.trim();
-    const des = desInput.value.trim();
-    const cat = catInput.value.trim();
-    const qty = Number(qtyInput.value);
-    const price = Number(priceInput.value);
-
-    if (!ref || !des) {
+    const designation = desInput.value.trim();
+    if (!ref || !designation) {
       alert("Référence et désignation obligatoires");
       return;
     }
 
+    const qty = Number(qtyInput.value) || 0;
+    const price = Number(priceInput.value) || 0;
+
     const existing = inventory.find(i => i.ref === ref);
     if (existing) {
+      existing.designation = designation;
+      existing.category = catInput.value;
       existing.qty += qty;
-      existing.designation = des;
-      existing.category = cat;
       existing.price = price;
     } else {
-      inventory.push({ ref, designation: des, category: cat, qty, price });
+      inventory.push({
+        ref,
+        designation,
+        category: catInput.value,
+        qty,
+        price
+      });
     }
 
     saveLocal();
     renderTable(searchBox.value);
     closePopup();
-  };
+  });
 
-  resetQtyBtn.onclick = () => {
+  cancelBtn.addEventListener("click", closePopup);
+
+  resetQtyBtn.addEventListener("click", () => {
     if (!confirm("Remettre toutes les quantités à zéro ?")) return;
     inventory.forEach(i => i.qty = 0);
     saveLocal();
     renderTable();
-  };
+  });
 
-  exportBtn.onclick = () => {
+  exportBtn.addEventListener("click", () => {
     if (!inventory.length) return alert("Inventaire vide");
 
     const rows = [
-      ["Ref", "Désignation", "Catégorie", "Qté", "Prix", "Total"],
-      ...inventory.map(i => [
+      ["Ref", "Désignation", "Catégorie", "Qté", "Prix", "Total"]
+    ];
+
+    inventory.forEach(i =>
+      rows.push([
         i.ref,
         i.designation,
         i.category,
@@ -147,18 +198,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         i.price,
         (i.qty * (i.price || 0)).toFixed(2)
       ])
-    ];
+    );
 
     const csv = rows.map(r => r.join(";")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "inventaire.csv";
     a.click();
-  };
+  });
 
-  searchBox.oninput = () => renderTable(searchBox.value);
+  /* === Camera === */
+  let qr;
+  scanBtn.addEventListener("click", async () => {
+    scannerDiv.style.display = "block";
+    scannerDiv.innerHTML = "<div id='reader'></div>";
+
+    qr = new Html5Qrcode("reader");
+    const cams = await Html5Qrcode.getCameras();
+    await qr.start(cams[0].id, { fps: 10, qrbox: 250 },
+      txt => {
+        qr.stop();
+        scannerDiv.style.display = "none";
+        openPopup({ ref: txt, designation: "", qty: 1, price: 0 });
+      }
+    );
+  });
 
   renderTable();
 });

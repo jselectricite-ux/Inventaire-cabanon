@@ -1,6 +1,7 @@
 /* =============================
    Inventaire Cabanon – app.js
    ============================= */
+console.log("✅ app.js chargé");
 
 const STORAGE_KEY = "inventaire_cabanon_v2";
 

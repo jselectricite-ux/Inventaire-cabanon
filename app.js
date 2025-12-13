@@ -208,55 +208,60 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.click();
   });
 
-  /* === Camera === */
+  /
+/* === Camera / Scanner avancé === */
 let qr = null;
+let activeCameraId = null;
 
-scanBtn.addEventListener("click", async () => {
+async function startScanner() {
   scannerDiv.style.display = "block";
-  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
+  scannerDiv.innerHTML = `
+    <select id="cameraSelect"></select>
+    <button id="stopScanBtn">Arrêter</button>
+    <div id="reader" style="width:100%"></div>
+  `;
 
-  try {
-    const cameras = await Html5Qrcode.getCameras();
-    if (!cameras.length) throw "Aucune caméra détectée";
+  const cameraSelect = document.getElementById("cameraSelect");
+  const stopBtn = document.getElementById("stopScanBtn");
 
-    // 🔥 Cherche caméra arrière en priorité
-    let cameraId = cameras[0].id;
-    const backCam = cameras.find(c =>
-      /back|rear|environment/i.test(c.label)
-    );
-    if (backCam) cameraId = backCam.id;
+  const cameras = await Html5Qrcode.getCameras();
+  cameras.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.label || "Caméra";
+    cameraSelect.appendChild(opt);
+    if (/back|rear|environment/i.test(c.label)) activeCameraId = c.id;
+  });
 
-    qr = new Html5Qrcode("reader");
+  cameraSelect.value = activeCameraId || cameras[0].id;
+
+  qr = new Html5Qrcode("reader");
+
+  async function launch() {
+    if (qr.isScanning) await qr.stop();
+    activeCameraId = cameraSelect.value;
 
     await qr.start(
-  cameraId,
-  {
-    fps: 10,
-    qrbox: { width: 300, height: 200 },
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.QR_CODE,
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39
-    ]
-  },
-  decodedText => {
-    qr.stop();
-    scannerDiv.style.display = "none";
+      activeCameraId,
+      {
+        fps: 10,
+        qrbox: { width: 300, height: 200 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39
+        ]
+      },
+      onScanSuccess
+    );
+  }
 
-    openPopup({
-      ref: decodedText,
-      designation: "",
-      category: "",
-      qty: 1,
-      price: 0
-    });
-  }
-);
-  } catch (err) {
-    alert("Erreur caméra : " + err);
-    scannerDiv.style.display = "none";
-  }
-});
-}); // 👈 FERMETURE DOMContentLoaded
+  cameraSelect.onchange = launch;
+  stopBtn.onclick = stopScanner;
+
+  await launch();
+}
+
+function

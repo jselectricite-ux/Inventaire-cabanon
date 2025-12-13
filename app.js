@@ -1,11 +1,13 @@
 /* ================================
    Inventaire Cabanon – app.js
+   Version PRO + PWA Install
 ================================ */
 
 console.log("✅ app.js chargé");
 
-const STORAGE_KEY = "inventaire_cabanon_v2";
+const STORAGE_KEY = "inventaire_cabanon_v5";
 
+/* === Catalogues fournisseurs === */
 const catalogs = {
   hager: [],
   legrand: [],
@@ -21,35 +23,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* === DOM === */
   const tableBody = document.querySelector("#table tbody");
   const searchBox = document.getElementById("searchBox");
-  const catalogSelect = document.getElementById("catalogSelect");
   const scanBtn = document.getElementById("scanBtn");
   const addManualBtn = document.getElementById("addManualBtn");
   const resetQtyBtn = document.getElementById("resetQtyBtn");
   const exportBtn = document.getElementById("exportBtn");
+  const installBtn = document.getElementById("installBtn");
 
   const popup = document.getElementById("popup");
   const refInput = document.getElementById("refInput");
   const desInput = document.getElementById("desInput");
   const catInput = document.getElementById("catInput");
+  const supplierInput = document.getElementById("supplierInput");
   const qtyInput = document.getElementById("qtyInput");
+  const minQtyInput = document.getElementById("minQtyInput");
   const priceInput = document.getElementById("priceInput");
   const saveBtn = document.getElementById("saveBtn");
   const cancelBtn = document.getElementById("cancelBtn");
 
   const scannerDiv = document.getElementById("scanner");
 
-  /* === Load catalogs (JSON at root) === */
-  const names = ["hager", "legrand", "schneider", "sonepar", "wurth"];
-  for (const n of names) {
+  /* === PWA INSTALL === */
+  let deferredPrompt = null;
+
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.style.display = "inline-block";
+  });
+
+  installBtn?.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      console.log("✅ App installée");
+    }
+    deferredPrompt = null;
+    installBtn.style.display = "none";
+  });
+
+  window.addEventListener("appinstalled", () => {
+    console.log("📲 Application installée");
+    if (installBtn) installBtn.style.display = "none";
+  });
+
+  /* === Chargement catalogues === */
+  for (const name of Object.keys(catalogs)) {
     try {
-      const r = await fetch(`${n}.json`);
-      catalogs[n] = await r.json();
+      const r = await fetch(`${name}.json`);
+      catalogs[name] = await r.json();
     } catch {
-      catalogs[n] = [];
+      catalogs[name] = [];
     }
   }
 
-  /* === Load inventory === */
+  /* === Chargement inventaire === */
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) JSON.parse(saved).forEach(i => inventory.push(i));
 
@@ -69,136 +97,115 @@ document.addEventListener("DOMContentLoaded", async () => {
         !item.designation.toLowerCase().includes(f)
       ) return;
 
+      const lowStock = item.minQty && item.qty < item.minQty;
       const tr = document.createElement("tr");
+      if (lowStock) tr.style.background = "#ffcccc";
+
       tr.innerHTML = `
         <td>${item.ref}</td>
         <td>${item.designation}</td>
         <td>${item.category || ""}</td>
+        <td>${item.supplier || ""}</td>
         <td>${item.qty}</td>
+        <td>${item.minQty ?? "-"}</td>
         <td>${item.price || ""}</td>
         <td>${(item.qty * (item.price || 0)).toFixed(2)}</td>
         <td><button class="editBtn">Modifier</button></td>
       `;
+
       tr.querySelector(".editBtn").onclick = () => openPopup(item);
       tableBody.appendChild(tr);
     });
   }
 
-  function openPopup(item = null) {
+  function openPopup(item = {}) {
     popup.style.display = "flex";
-    if (item) {
-      refInput.value = item.ref;
-      desInput.value = item.designation;
-      catInput.value = item.category || "";
-      qtyInput.value = item.qty;
-      priceInput.value = item.price || "";
-    } else {
-      refInput.value = "";
-      desInput.value = "";
-      catInput.value = "";
-      qtyInput.value = 1;
-      priceInput.value = "";
-    }
+    refInput.value = item.ref || "";
+    desInput.value = item.designation || "";
+    catInput.value = item.category || "";
+    supplierInput.value = item.supplier || "";
+    qtyInput.value = item.qty ?? 1;
+    minQtyInput.value = item.minQty ?? 0;
+    priceInput.value = item.price ?? "";
   }
 
   function closePopup() {
     popup.style.display = "none";
   }
 
-  /* === Events === */
-
-  searchBox.addEventListener("input", () => renderTable(searchBox.value));
-
-  catalogSelect.addEventListener("change", () => {
-    if (catalogSelect.value === "all") {
-      renderTable(searchBox.value);
-      return;
+  function findInCatalogs(code) {
+    for (const supplier in catalogs) {
+      const found = catalogs[supplier].find(
+        i => i.ean === code || i.ref === code
+      );
+      if (found) return { ...found, supplier };
     }
+    return null;
+  }
 
-    tableBody.innerHTML = "";
-    catalogs[catalogSelect.value].forEach(i => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${i.ref}</td>
-        <td>${i.designation}</td>
-        <td>${i.category || ""}</td>
-        <td>0</td>
-        <td></td>
-        <td>0.00</td>
-        <td><button class="addBtn">Ajouter</button></td>
-      `;
-      tr.querySelector(".addBtn").onclick = () =>
-        openPopup({
-          ref: i.ref,
-          designation: i.designation,
-          category: i.category,
-          qty: 1,
-          price: 0
-        });
-      tableBody.appendChild(tr);
-    });
-  });
+  /* === EVENTS === */
+  searchBox.oninput = () => renderTable(searchBox.value);
+  addManualBtn.onclick = () => openPopup();
 
-  addManualBtn.addEventListener("click", () => openPopup());
-
-  saveBtn.addEventListener("click", () => {
+  saveBtn.onclick = () => {
     const ref = refInput.value.trim();
     const designation = desInput.value.trim();
-    if (!ref || !designation) {
-      alert("Référence et désignation obligatoires");
-      return;
-    }
+    if (!ref || !designation) return alert("Référence et désignation obligatoires");
 
     const qty = Number(qtyInput.value) || 0;
+    const minQty = Number(minQtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
 
     const existing = inventory.find(i => i.ref === ref);
     if (existing) {
       existing.designation = designation;
       existing.category = catInput.value;
+      existing.supplier = supplierInput.value;
       existing.qty += qty;
+      existing.minQty = minQty;
       existing.price = price;
+      existing.lastUpdate = new Date().toISOString();
     } else {
       inventory.push({
         ref,
         designation,
         category: catInput.value,
+        supplier: supplierInput.value,
         qty,
-        price
+        minQty,
+        price,
+        lastUpdate: new Date().toISOString()
       });
     }
 
     saveLocal();
     renderTable(searchBox.value);
     closePopup();
-  });
+  };
 
-  cancelBtn.addEventListener("click", closePopup);
+  cancelBtn.onclick = closePopup;
 
-  resetQtyBtn.addEventListener("click", () => {
+  resetQtyBtn.onclick = () => {
     if (!confirm("Remettre toutes les quantités à zéro ?")) return;
     inventory.forEach(i => i.qty = 0);
     saveLocal();
     renderTable();
-  });
+  };
 
-  exportBtn.addEventListener("click", () => {
-    if (!inventory.length) return alert("Inventaire vide");
-
+  exportBtn.onclick = () => {
     const rows = [
-      ["Ref", "Désignation", "Catégorie", "Qté", "Prix", "Total"]
-    ];
-
-    inventory.forEach(i =>
-      rows.push([
+      ["Ref","Désignation","Catégorie","Fournisseur","Qté","Mini","Prix","Total"],
+      ...inventory.map(i => [
         i.ref,
         i.designation,
         i.category,
+        i.supplier,
         i.qty,
+        i.minQty,
         i.price,
         (i.qty * (i.price || 0)).toFixed(2)
       ])
-    );
+    ];
 
     const csv = rows.map(r => r.join(";")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -206,110 +213,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.href = URL.createObjectURL(blob);
     a.download = "inventaire.csv";
     a.click();
-  });
+  };
 
-  /* === Camera / Scanner avancé === */
-let qr = null;
-let activeCameraId = null;
+  /* === SCANNER === */
+  let qr = null;
 
-async function startScanner() {
-  scannerDiv.style.display = "block";
-  scannerDiv.innerHTML = `
-    <select id="cameraSelect"></select>
-    <button id="stopScanBtn">Arrêter</button>
-    <div id="reader" style="width:100%"></div>
-  `;
+  scanBtn.onclick = async () => {
+    scannerDiv.style.display = "block";
+    scannerDiv.innerHTML = `<div id="reader"></div>`;
 
-  const cameraSelect = document.getElementById("cameraSelect");
-  const stopBtn = document.getElementById("stopScanBtn");
-
-  const cameras = await Html5Qrcode.getCameras();
-  if (!cameras.length) {
-    alert("Aucune caméra détectée");
-    return;
-  }
-
-  cameras.forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = c.label || "Caméra";
-    cameraSelect.appendChild(opt);
-    if (/back|rear|environment/i.test(c.label)) activeCameraId = c.id;
-  });
-
-  cameraSelect.value = activeCameraId || cameras[0].id;
-
-  qr = new Html5Qrcode("reader");
-
-  async function launch() {
-    if (qr.isScanning) await qr.stop();
-    activeCameraId = cameraSelect.value;
-
+    qr = new Html5Qrcode("reader");
     await qr.start(
-      activeCameraId,
+      { facingMode: "environment" },
       {
         fps: 10,
-        qrbox: { width: 300, height: 200 },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39
-        ]
+        qrbox: { width: 300, height: 200 }
       },
-      onScanSuccess
+      code => {
+        qr.stop();
+        scannerDiv.style.display = "none";
+
+        const found = findInCatalogs(code);
+        openPopup(found ? {
+          ref: found.ref || code,
+          designation: found.designation,
+          category: found.category,
+          supplier: found.supplier,
+          price: found.price || 0,
+          qty: 1
+        } : { ref: code, qty: 1 });
+      }
     );
-  }
+  };
 
-  cameraSelect.onchange = launch;
-  stopBtn.onclick = stopScanner;
-
-  await launch();
-}
-
-function stopScanner() {
-  if (qr && qr.isScanning) qr.stop();
-  scannerDiv.style.display = "none";
-}
-
-function findInCatalog(code) {
-  for (const name in catalogs) {
-    const found = catalogs[name].find(i =>
-      i.ref === code || i.ean === code || i.barcode === code
-    );
-    if (found) return found;
-  }
-  return null;
-}
-
-function onScanSuccess(code) {
-  stopScanner();
-
-  const existing = inventory.find(i => i.ref === code);
-  if (existing) {
-    openPopup(existing);
-    return;
-  }
-
-  const fromCatalog = findInCatalog(code);
-  if (fromCatalog) {
-    openPopup({
-      ref: fromCatalog.ref || code,
-      designation: fromCatalog.designation || "",
-      category: fromCatalog.category || "",
-      qty: 1,
-      price: 0
-    });
-  } else {
-    openPopup({
-      ref: code,
-      designation: "",
-      category: "",
-      qty: 1,
-      price: 0
-    });
-  }
-}
-
-scanBtn.addEventListener("click", startScanner);
+  renderTable();
+});

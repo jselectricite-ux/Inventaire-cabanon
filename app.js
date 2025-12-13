@@ -208,16 +208,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.click();
   });
 
-  /* === Camera === */
-let qr = null;
-
-scanBtn.addEventListener("click", async () => {
-  scannerDiv.style.display = "block";
-  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
-
-  try {
-    qr = new Html5Qrcode("reader");
-
     /* === Camera === */
 let qr = null;
 

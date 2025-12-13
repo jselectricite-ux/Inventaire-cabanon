@@ -208,8 +208,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.click();
   });
 
-  /
-/* === Camera / Scanner avancé === */
+  /* === Camera / Scanner avancé === */
 let qr = null;
 let activeCameraId = null;
 
@@ -264,4 +263,50 @@ async function startScanner() {
   await launch();
 }
 
-function
+function stopScanner() {
+  if (qr) qr.stop();
+  scannerDiv.style.display = "none";
+}
+
+function findInCatalog(code) {
+  for (const name in catalogs) {
+    const found = catalogs[name].find(i =>
+      i.ref === code || i.ean === code || i.barcode === code
+    );
+    if (found) return found;
+  }
+  return null;
+}
+
+function onScanSuccess(code) {
+  stopScanner();
+
+  // 🔎 existe déjà ?
+  const existing = inventory.find(i => i.ref === code);
+  if (existing) {
+    openPopup(existing);
+    return;
+  }
+
+  // 🔎 recherche fournisseur
+  const fromCatalog = findInCatalog(code);
+  if (fromCatalog) {
+    openPopup({
+      ref: fromCatalog.ref || code,
+      designation: fromCatalog.designation || "",
+      category: fromCatalog.category || "",
+      qty: 1,
+      price: 0
+    });
+  } else {
+    openPopup({
+      ref: code,
+      designation: "",
+      category: "",
+      qty: 1,
+      price: 0
+    });
+  }
+}
+
+scanBtn.addEventListener("click", startScanner);

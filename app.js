@@ -1,4 +1,27 @@
+const catalogs = {
+  hager: [],
+  legrand: [],
+  schneider: [],
+  sonepar: [],
+  wurth: []
+};
 
+async function loadCatalog(name) {
+  const res = await fetch(`${name}.json`);
+  catalogs[name] = await res.json();
+}
+
+async function loadAllCatalogs() {
+  await Promise.all([
+    loadCatalog("hager"),
+    loadCatalog("legrand"),
+    loadCatalog("schneider"),
+    loadCatalog("sonepar"),
+    loadCatalog("wurth")
+  ]);
+}
+
+loadAllCatalogs();
 const catalogs = {};
 const inventory = []; 
 const STORAGE_KEY = 'inventaire_cabanon_v2';

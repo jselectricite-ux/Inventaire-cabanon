@@ -260,4 +260,3 @@ scanBtn.addEventListener("click", async () => {
   }
 });
 }); // 👈 FERMETURE DOMContentLoaded
-});

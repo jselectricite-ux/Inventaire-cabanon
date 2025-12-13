@@ -215,8 +215,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     scannerDiv.innerHTML = "<div id='reader'></div>";
 
     qr = new Html5Qrcode("reader");
-    const cams = await Html5Qrcode.getCameras();
-    await qr.start(cams[0].id, { fps: 10, qrbox: 250 },
+    scanBtn.addEventListener("click", async () => {
+  scannerDiv.style.display = "block";
+  scannerDiv.innerHTML = "<div id='reader'></div>";
+
+  qr = new Html5Qrcode("reader");
+
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+
+    // 🔥 Priorité caméra arrière
+    let cameraId =
+      cameras.find(c =>
+        c.label.toLowerCase().includes("back") ||
+        c.label.toLowerCase().includes("rear") ||
+        c.label.toLowerCase().includes("environment")
+      )?.id || cameras[cameras.length - 1].id;
+
+    await qr.start(
+      cameraId,
+      {
+        fps: 10,
+        qrbox: { width: 280, height: 180 }
+      },
+      decodedText => {
+        qr.stop();
+        scannerDiv.style.display = "none";
+        openPopup({
+          ref: decodedText,
+          designation: "",
+          category: "",
+          qty: 1,
+          price: 0
+        });
+      }
+    );
+  } catch (e) {
+    alert("Caméra indisponible : " + e);
+  }
+});
       txt => {
         qr.stop();
         scannerDiv.style.display = "none";

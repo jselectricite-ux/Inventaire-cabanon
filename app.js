@@ -209,37 +209,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* === Camera === */
-  let qr = null;
+let qr = null;
 
-  scanBtn.addEventListener("click", async () => {
-    scannerDiv.style.display = "block";
-    scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
+scanBtn.addEventListener("click", async () => {
+  scannerDiv.style.display = "block";
+  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
 
-    try {
-      qr = new Html5Qrcode("reader");
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+    if (!cameras.length) throw "Aucune caméra détectée";
 
-      await qr.start(
-        { facingMode: "environment" }, // ✅ caméra arrière forcée
-        {
-          fps: 10,
-          qrbox: { width: 280, height: 180 }
-        },
-        decodedText => {
-          qr.stop();
-          scannerDiv.style.display = "none";
+    // 🔥 Cherche caméra arrière en priorité
+    let cameraId = cameras[0].id;
+    const backCam = cameras.find(c =>
+      /back|rear|environment/i.test(c.label)
+    );
+    if (backCam) cameraId = backCam.id;
 
-          openPopup({
-            ref: decodedText,
-            designation: "",
-            category: "",
-            qty: 1,
-            price: 0
-          });
-        }
-      );
-    } catch (err) {
-      alert("Erreur caméra : " + err);
-      scannerDiv.style.display = "none";
-    }
-  });
+    qr = new Html5Qrcode("reader");
+
+    await qr.start(
+      cameraId, // ✅ DEVICE ID FORCÉ
+      {
+        fps: 10,
+        qrbox: { width: 280, height: 180 }
+      },
+      decodedText => {
+        qr.stop();
+        scannerDiv.style.display = "none";
+
+        openPopup({
+          ref: decodedText,
+          designation: "",
+          category: "",
+          qty: 1,
+          price: 0
+        });
+      }
+    );
+  } catch (err) {
+    alert("Erreur caméra : " + err);
+    scannerDiv.style.display = "none";
+  }
 });

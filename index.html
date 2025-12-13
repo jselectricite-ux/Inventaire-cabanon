@@ -54,5 +54,15 @@
   </div>
 
   <footer><small>Catalogues intégrés : Hager / Legrand / Schneider / Sonepar / Wurth — sans prix. Import Sonepar possible.</small></footer>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("sw.js")
+        .then(() => console.log("✅ Service Worker enregistré"))
+        .catch(err => console.error("❌ SW erreur :", err));
+    });
+  }
+</script>
 </body>
 </html>

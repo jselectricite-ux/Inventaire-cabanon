@@ -208,37 +208,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.click();
   });
 
-    /* === Camera === */
-let qr = null;
+  /* === Camera === */
+  let qr = null;
 
-scanBtn.addEventListener("click", async () => {
-  scannerDiv.style.display = "block";
-  scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
+  scanBtn.addEventListener("click", async () => {
+    scannerDiv.style.display = "block";
+    scannerDiv.innerHTML = "<div id='reader' style='width:100%'></div>";
 
-  try {
-    qr = new Html5Qrcode("reader");
+    try {
+      qr = new Html5Qrcode("reader");
 
-    await qr.start(
-      { facingMode: "environment" }, // ✅ caméra arrière forcée
-      {
-        fps: 10,
-        qrbox: { width: 280, height: 180 }
-      },
-      decodedText => {
-        qr.stop();
-        scannerDiv.style.display = "none";
+      await qr.start(
+        { facingMode: "environment" }, // ✅ caméra arrière forcée
+        {
+          fps: 10,
+          qrbox: { width: 280, height: 180 }
+        },
+        decodedText => {
+          qr.stop();
+          scannerDiv.style.display = "none";
 
-        openPopup({
-          ref: decodedText,
-          designation: "",
-          category: "",
-          qty: 1,
-          price: 0
-        });
-      }
-    );
-  } catch (err) {
-    alert("Erreur caméra : " + err);
-    scannerDiv.style.display = "none";
-  }
+          openPopup({
+            ref: decodedText,
+            designation: "",
+            category: "",
+            qty: 1,
+            price: 0
+          });
+        }
+      );
+    } catch (err) {
+      alert("Erreur caméra : " + err);
+      scannerDiv.style.display = "none";
+    }
+  });
 });
